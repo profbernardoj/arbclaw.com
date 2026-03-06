@@ -1,6 +1,6 @@
 ---
 name: everclaw
-version: 2026.2.23
+version: 2026.3.5
 description: Open-source first AI inference — GLM-5 as default, Claude as fallback only. Own your inference forever via the Morpheus decentralized network. Stake MOR tokens, access GLM-5, GLM-4.7 Flash, Kimi K2.5, and 30+ models with persistent inference by recycling staked MOR. Open-source first model router routes all tiers to Morpheus by default — Claude only kicks in as an escape hatch when needed. Includes Morpheus API Gateway bootstrap for zero-config startup, OpenAI-compatible proxy with auto-session management, automatic retry with fresh sessions, OpenAI-compatible error classification to prevent cooldown cascades, multi-key auth rotation v2 with proactive DIEM balance monitoring and reactive 402 watchdog, Gateway Guardian v5 with direct curl inference probes (eliminates Signal spam), proactive Venice DIEM credit monitoring, circuit breaker for stuck sub-agents, nuclear self-healing restart, always-on proxy-router with launchd auto-restart, smart session archiver, three-shift cyclic execution engine (v2 with 15-minute execution loops), 24/7 always-on power configuration for macOS, bundled security skills, zero-dependency wallet management via macOS Keychain, x402 payment client for agent-to-agent USDC payments, and ERC-8004 agent registry reader for discovering trustless agents on Base.
 homepage: https://everclaw.com
 metadata:
@@ -123,6 +123,54 @@ Open-source first. GLM-5 handles everything — Claude is the escape hatch, not 
 > 📦 **ClawHub:** `clawhub install everclaw-inference` — [clawhub.ai/EverClaw/everclaw-inference](https://clawhub.ai/EverClaw/everclaw-inference)
 >
 > ⚠️ **Name Collision Warning:** A different product ("Everclaw Vault") uses the bare `everclaw` slug on ClawHub. **Always use `everclaw-inference`** — never `clawhub install everclaw` or `clawhub update everclaw`. See `CLAWHUB_WARNING.md` for details.
+
+---
+
+## Prerequisites
+
+Before installing EverClaw, ensure you have the following:
+
+| Dependency | How to Install | Required For |
+|------------|----------------|--------------|
+| **Homebrew** (macOS) | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` | Package manager |
+| **Node.js** (v18+) | `brew install node` | Bootstrap scripts, proxy |
+| **Git** | `brew install git` | Skill installation |
+| **OpenClaw** | `curl -fsSL https://get.openclaw.ai \| bash` | Agent runtime |
+
+### Quick Check
+
+Run this to verify your environment:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/profbernardoj/everclaw/main/scripts/install-with-deps.sh | bash -s -- --check-only
+```
+
+### One-Line Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/profbernardoj/everclaw/main/scripts/install-with-deps.sh | bash
+```
+
+This will:
+1. Check for all required dependencies
+2. Prompt to install any missing ones
+3. Clone EverClaw to `~/.openclaw/workspace/skills/everclaw`
+4. Bootstrap a free GLM-5 starter key (1,000 requests/day)
+5. Optionally install the Morpheus proxy-router for P2P inference
+
+### New to OpenClaw?
+
+If you don't have OpenClaw installed yet:
+
+```bash
+# Install OpenClaw first
+curl -fsSL https://get.openclaw.ai | bash
+
+# Then install EverClaw
+curl -fsSL https://raw.githubusercontent.com/profbernardoj/everclaw/main/scripts/install-with-deps.sh | bash
+```
+
+---
 
 ## How It Works
 
