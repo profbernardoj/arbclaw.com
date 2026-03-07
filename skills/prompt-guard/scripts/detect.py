@@ -1,7 +1,20 @@
 #!/usr/bin/env python3
 """
-Prompt Guard v2.5.2 - Advanced Prompt Injection Detection
+Prompt Guard v2.7.0 - Advanced Prompt Injection Detection
 Multi-language, context-aware, severity-scored detection system.
+
+Changelog v2.7.0 (2026-03-07):
+- Added EXTERNAL CONTENT DETECTION for instruction injection from untrusted sources
+- New pattern categories:
+  - EXTERNAL_SOURCE_MARKERS: Detect GitHub issues, PRs, emails, Slack, Discord, tweets
+  - EXTERNAL_INSTRUCTION_PATTERNS: Command injection in external content
+  - EXTERNAL_URGENCY_COMMANDS: Urgency + command combinations (multi-language)
+  - EXTERNAL_CRITICAL_PATTERNS: Always-block patterns (RCE, destructive commands)
+  - EXTERNAL_CONTEXT_PATTERNS: Identify specific source types (github_issue, email, etc.)
+- Context-aware severity elevation: external source + instruction = higher severity
+- Blocks critical patterns (curl|bash, rm -rf, sudo install, etc.) from external sources
+- Multi-language urgency detection (EN/KO/JA/ZH)
+- Real-world attack vector coverage: GitHub issue title injection, PR description attacks
 
 Changelog v2.6.0 (2026-02-01):
 - Added Single Approval Expansion detection (scope creep attacks)
@@ -843,6 +856,13 @@ EXTERNAL_INSTRUCTION_PATTERNS = [
     r"(?i)(execute|run|eval|exec)\s*:\s*",
     r"(?i)(please|pls)\s+(execute|run|eval|do)\s*:",
     r"(?i)(action|command|cmd)\s*:\s*",
+    r"(?i)(testing|test)\s*:\s*(please|run|execute)",
+    
+    # "Run this" patterns common in PR descriptions
+    r"(?i)(run|execute)\s+(this|the)\s+(command|script|test)",
+    r"(?i)(please|pls)\s+(run|execute|test)\s+",
+    r"(?i)(npm|yarn|pip|cargo)\s+(install|run|test|exec)",
+    r"(?i)make\s+(install|test|run|build)",
     
     # Shell command patterns
     r"(?i)(curl|wget)\s+[^\s]+\s*\|\s*(bash|sh|zsh|python|node|ruby)",
@@ -865,6 +885,8 @@ EXTERNAL_INSTRUCTION_PATTERNS = [
     # Data exfiltration in external content
     r"(?i)(send|post|upload|share|email|transfer)\s*.{0,30}(file|data|content|info|(api[_-]?key|token|secret|password|credential))",
     r"(?i)(copy|extract|dump|export)\s*.{0,20}(data|file|content|config|\.env)",
+    r"(?i)(share|send)\s*(the\s+)?(api[_-]?key|token|secret|password|credential)",
+    r"(?i)(what('s| is)\s+the\s+)?(api[_-]?key|token|secret|password)",
     
     # File/environment access in external content
     r"(?i)(read|open|cat|type)\s*.{0,30}(\.env|config|credential|secret|key|password)",
