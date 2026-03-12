@@ -5,9 +5,10 @@ All notable changes to EverClaw are documented here.
 ## [2026.3.15] - 2026-03-12
 
 ### Added
-- **setup-ollama.sh** — Hardware-aware local Ollama inference fallback (915 lines)
+- **setup-ollama.sh** — Hardware-aware local Ollama inference fallback
   - Auto-detects OS, CPU arch, total/available RAM, GPU (Apple Metal, NVIDIA CUDA, AMD ROCm)
-  - Selects optimal Qwen3.5 model (1.5B–72B) based on available resources
+  - Selects optimal Qwen3.5 model (0.8B–35B) based on available resources
+  - Model sizes verified against Ollama registry (0.8b, 2b, 4b, 9b, 27b, 35b)
   - Installs Ollama, pulls model, configures OpenClaw provider + fallback chain
   - Sets up auto-start service (launchd on macOS, systemd on Linux)
   - Tests inference after setup, dry-run by default

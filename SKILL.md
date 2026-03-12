@@ -119,14 +119,14 @@ node scripts/setup.mjs --key <API_KEY> --with-ollama --apply --restart
 ```
 
 **Hardware → Model auto-selection:**
-| Available RAM | Model | Quality |
-|--------------|-------|---------|
-| < 2 GB | qwen3.5:1.5b | Basic — simple Q&A |
-| 2–4 GB | qwen3.5:4b | Good — general tasks |
-| 4–8 GB | qwen3.5:9b | Strong — coding, analysis |
-| 8–16 GB | qwen3.5:14b | Very strong — complex reasoning |
-| 16–32 GB | qwen3.5:32b | Excellent — near-frontier |
-| 32+ GB | qwen3.5:72b | Frontier — matches cloud |
+| Available RAM | Model | Download | Quality |
+|--------------|-------|----------|---------|
+| < 1.2 GB | qwen3.5:0.8b | ~0.9 GB | Minimal — simple Q&A |
+| 1.2–3.2 GB | qwen3.5:2b | ~2.5 GB | Basic — general tasks |
+| 3.2–4 GB | qwen3.5:4b | ~3.1 GB | Good — coding, summarization |
+| 4–20 GB | qwen3.5:9b | ~6.1 GB | Strong — coding, analysis |
+| 20–27 GB | qwen3.5:27b | ~16.2 GB | Excellent — near-frontier |
+| 27+ GB | qwen3.5:35b | ~22.2 GB | Frontier — matches cloud |
 
 **Additional commands:**
 ```bash

@@ -23,25 +23,26 @@ readonly OLLAMA_URL="https://ollama.com/install.sh"
 readonly OLLAMA_API="http://127.0.0.1:11434"
 
 # Model family: qwen3.5 (consistent behavior, Apache 2.0, strong tool use)
-# RAM requirements = model file size * 1.2 (safe overhead)
-# Note: Using suffix-map instead of associative array for bash 3 compatibility
-MODEL_1_5B_SIZE=1100    # ~1.1 GB file, needs ~1.3 GB RAM
-MODEL_4B_SIZE=2700      # ~2.7 GB file, needs ~3.2 GB RAM
-MODEL_9B_SIZE=6600      # ~6.6 GB file, needs ~8 GB RAM
-MODEL_14B_SIZE=9400     # ~9.4 GB file, needs ~11 GB RAM
-MODEL_32B_SIZE=20000    # ~20 GB file, needs ~24 GB RAM
-MODEL_72B_SIZE=45000    # ~45 GB file, needs ~54 GB RAM
+# Sizes verified against Ollama registry (ollama.com/library/qwen3.5)
+# RAM requirements = model file size * ~1.2 (safe overhead)
+# Note: Using case functions for bash 3 compatibility (no associative arrays)
+MODEL_0_8B_SIZE=900     # ~0.9 GB file, needs ~1.1 GB RAM
+MODEL_2B_SIZE=2500      # ~2.5 GB file, needs ~3.0 GB RAM
+MODEL_4B_SIZE=3100      # ~3.1 GB file, needs ~3.7 GB RAM
+MODEL_9B_SIZE=6100      # ~6.1 GB file, needs ~7.3 GB RAM
+MODEL_27B_SIZE=16200    # ~16.2 GB file, needs ~19.4 GB RAM
+MODEL_35B_SIZE=22200    # ~22.2 GB file, needs ~26.6 GB RAM
 
-# Get model size by name
+# Get model size by name (MB)
 get_model_size() {
   local model="$1"
   case "$model" in
-    qwen3.5:1.5b) echo $MODEL_1_5B_SIZE ;;
+    qwen3.5:0.8b) echo $MODEL_0_8B_SIZE ;;
+    qwen3.5:2b)   echo $MODEL_2B_SIZE ;;
     qwen3.5:4b)   echo $MODEL_4B_SIZE ;;
     qwen3.5:9b)   echo $MODEL_9B_SIZE ;;
-    qwen3.5:14b)  echo $MODEL_14B_SIZE ;;
-    qwen3.5:32b)  echo $MODEL_32B_SIZE ;;
-    qwen3.5:72b)  echo $MODEL_72B_SIZE ;;
+    qwen3.5:27b)  echo $MODEL_27B_SIZE ;;
+    qwen3.5:35b)  echo $MODEL_35B_SIZE ;;
     *)            echo 0 ;;
   esac
 }
@@ -50,12 +51,12 @@ get_model_size() {
 get_model_quality() {
   local model="$1"
   case "$model" in
-    qwen3.5:1.5b) echo "Basic — simple Q&A, formatting" ;;
-    qwen3.5:4b)   echo "Good — general tasks, light coding" ;;
+    qwen3.5:0.8b) echo "Minimal — simple Q&A, formatting" ;;
+    qwen3.5:2b)   echo "Basic — general tasks, light coding" ;;
+    qwen3.5:4b)   echo "Good — coding, summarization" ;;
     qwen3.5:9b)   echo "Strong — coding, analysis, most tasks" ;;
-    qwen3.5:14b)  echo "Very strong — complex reasoning" ;;
-    qwen3.5:32b)  echo "Excellent — near-frontier quality" ;;
-    qwen3.5:72b)  echo "Frontier — matches cloud models" ;;
+    qwen3.5:27b)  echo "Excellent — complex reasoning, near-frontier" ;;
+    qwen3.5:35b)  echo "Frontier — matches cloud models" ;;
     *)            echo "Unknown model" ;;
   esac
 }
@@ -224,19 +225,23 @@ select_model() {
   fi
   
   # Model selection thresholds (RAM in MB)
-  # Model needs ~1.2x its file size in RAM
-  if [[ "$effective_ram_mb" -lt 2000 ]]; then
-    SELECTED_MODEL="qwen3.5:1.5b"
+  # Each model needs ~1.2x its file size in RAM
+  # Sizes verified against Ollama registry 2026-03-12
+  if [[ "$effective_ram_mb" -lt 1200 ]]; then
+    SELECTED_MODEL="qwen3.5:0.8b"    # needs ~1.1 GB
+  elif [[ "$effective_ram_mb" -lt 3200 ]]; then
+    SELECTED_MODEL="qwen3.5:2b"      # needs ~3.0 GB
   elif [[ "$effective_ram_mb" -lt 4000 ]]; then
-    SELECTED_MODEL="qwen3.5:4b"
+    SELECTED_MODEL="qwen3.5:4b"      # needs ~3.7 GB
   elif [[ "$effective_ram_mb" -lt 8000 ]]; then
-    SELECTED_MODEL="qwen3.5:9b"
-  elif [[ "$effective_ram_mb" -lt 16000 ]]; then
-    SELECTED_MODEL="qwen3.5:14b"
-  elif [[ "$effective_ram_mb" -lt 32000 ]]; then
-    SELECTED_MODEL="qwen3.5:32b"
+    SELECTED_MODEL="qwen3.5:9b"      # needs ~7.3 GB
+  elif [[ "$effective_ram_mb" -lt 20000 ]]; then
+    # Note: 9b is last safe choice for 8-19 GB (27b needs ~19.4 GB)
+    SELECTED_MODEL="qwen3.5:9b"      # needs ~7.3 GB
+  elif [[ "$effective_ram_mb" -lt 27000 ]]; then
+    SELECTED_MODEL="qwen3.5:27b"     # needs ~19.4 GB
   else
-    SELECTED_MODEL="qwen3.5:72b"
+    SELECTED_MODEL="qwen3.5:35b"     # needs ~26.6 GB
   fi
   
   local size_mb=$(get_model_size "$SELECTED_MODEL")
