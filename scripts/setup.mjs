@@ -14,6 +14,7 @@
  *   node scripts/setup.mjs --apply                      # Write changes to disk
  *   node scripts/setup.mjs --test                       # Test gateway connectivity
  *   node scripts/setup.mjs --restart                    # Restart OpenClaw after apply
+ *   node scripts/setup.mjs --with-ollama                # Also setup local Ollama fallback
  *   node scripts/setup.mjs --help
  */
 
@@ -261,6 +262,8 @@ Flags:
   --test         Test gateway connectivity after setup
   --restart      Restart OpenClaw gateway after apply
   --template     Override OS auto-detection
+  --with-ollama  Also setup local Ollama inference fallback
+  --ollama-model Override auto-detected Ollama model (e.g. qwen3.5:32b)
 `);
 }
 
@@ -283,6 +286,8 @@ const apiKey = getArg('--key');
 const applyMode = args.includes('--apply');
 const testMode = args.includes('--test');
 const restartMode = args.includes('--restart');
+const withOllama = args.includes('--with-ollama');
+const ollamaModel = getArg('--ollama-model');
 
 // ─── Stage 1: Template Discovery ───────────────────────────────
 
@@ -415,9 +420,46 @@ if (applyMode) {
       console.log(`  ❌ Restart failed: ${result.error}`);
       console.log('  Run manually: openclaw gateway restart');
     }
-  } else {
+  } else if (!withOllama) {
     console.log('\n  Run "openclaw gateway restart" to apply changes.');
     console.log('  Or re-run with --restart to do it automatically.\n');
+  }
+
+  // Run Ollama setup if requested
+  if (withOllama) {
+    console.log('\n  ─── Ollama Local Fallback ────────────────────────────');
+    const ollamaScript = join(__dirname, 'setup-ollama.sh');
+    if (!existsSync(ollamaScript)) {
+      console.log('  ❌ setup-ollama.sh not found');
+    } else {
+      const ollamaArgs = ['--apply'];
+      if (ollamaModel) ollamaArgs.push('--model', ollamaModel);
+      const ollamaCmd = `bash "${ollamaScript}" ${ollamaArgs.join(' ')}`;
+      try {
+        const output = execSync(ollamaCmd, {
+          timeout: 600000, // 10 min (model pull can be slow)
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        console.log(output);
+      } catch (e) {
+        console.log(`  ❌ Ollama setup failed: ${e.message}`);
+        console.log('  You can run it separately: bash scripts/setup-ollama.sh --apply');
+      }
+    }
+
+    if (restartMode) {
+      console.log('\n  Restarting OpenClaw gateway...');
+      const result = restartGateway();
+      if (result.ok) {
+        console.log('  ✅ Gateway restarted');
+      } else {
+        console.log(`  ❌ Restart failed: ${result.error}`);
+      }
+    } else {
+      console.log('\n  Run "openclaw gateway restart" to apply changes.');
+      console.log('  Or re-run with --restart to do it automatically.\n');
+    }
   }
 } else {
   // Dry-run — but still allow --test

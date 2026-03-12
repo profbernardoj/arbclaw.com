@@ -1,7 +1,7 @@
 ---
 name: everclaw
-version: 2026.3.14
-description: Open-source first AI inference — GLM-5 as default, Claude as fallback only. Own your inference forever via the Morpheus decentralized network. Stake MOR tokens, access GLM-5, GLM-4.7 Flash, Kimi K2.5, and 30+ models with persistent inference by recycling staked MOR. Open-source first model router routes all tiers to Morpheus by default — Claude only kicks in as an escape hatch when needed. Includes Morpheus API Gateway bootstrap for zero-config startup, OpenAI-compatible proxy with auto-session management, automatic retry with fresh sessions, OpenAI-compatible error classification to prevent cooldown cascades, multi-key auth rotation v2 with proactive DIEM balance monitoring and reactive 402 watchdog, Gateway Guardian v5 with direct curl inference probes (eliminates Signal spam), proactive Venice DIEM credit monitoring, circuit breaker for stuck sub-agents, nuclear self-healing restart, always-on proxy-router with launchd auto-restart, smart session archiver, three-shift cyclic execution engine (v2 with 15-minute execution loops), 24/7 always-on power configuration for macOS, bundled security skills, zero-dependency wallet management via macOS Keychain, x402 payment client for agent-to-agent USDC payments, and ERC-8004 agent registry reader for discovering trustless agents on Base.
+version: 2026.3.15
+description: Open-source first AI inference — GLM-5 as default, Claude as fallback only. Own your inference forever via the Morpheus decentralized network. Stake MOR tokens, access GLM-5, GLM-4.7 Flash, Kimi K2.5, and 30+ models with persistent inference by recycling staked MOR. Open-source first model router routes all tiers to Morpheus by default — Claude only kicks in as an escape hatch when needed. Includes Morpheus API Gateway bootstrap for zero-config startup, OpenAI-compatible proxy with auto-session management, automatic retry with fresh sessions, OpenAI-compatible error classification to prevent cooldown cascades, multi-key auth rotation v2 with proactive DIEM balance monitoring and reactive 402 watchdog, Gateway Guardian v5 with direct curl inference probes (eliminates Signal spam), proactive Venice DIEM credit monitoring, circuit breaker for stuck sub-agents, nuclear self-healing restart, always-on proxy-router with launchd auto-restart, smart session archiver, three-shift cyclic execution engine (v2 with 15-minute execution loops), 24/7 always-on power configuration for macOS, bundled security skills, zero-dependency wallet management via macOS Keychain, x402 payment client for agent-to-agent USDC payments, ERC-8004 agent registry reader for discovering trustless agents on Base, and hardware-aware local Ollama fallback with auto model selection (Qwen3.5 family, 1.5B–72B based on available RAM/GPU).
 homepage: https://everclaw.com
 metadata:
   openclaw:
@@ -98,6 +98,54 @@ node ~/.openclaw/workspace/skills/everclaw/scripts/setup.mjs --key <API_KEY> --a
 | `--apply` | Write changes (default is dry-run) |
 | `--test` | Ping gateway after setup |
 | `--restart` | Restart OpenClaw gateway after apply |
+| `--with-ollama` | Also setup local Ollama inference as final fallback |
+| `--ollama-model <model>` | Override auto-detected Ollama model (e.g. `qwen3.5:32b`) |
+
+### 🏠 Local Inference Fallback (Ollama)
+
+EverClaw can set up a fully offline local inference fallback using Ollama. When all cloud/network providers (Morpheus Gateway, P2P, Venice) are unreachable, your agent keeps working.
+
+**How it works:** The script detects your hardware (RAM, GPU), selects the best Qwen3.5 model that fits, installs Ollama, pulls the model, and configures OpenClaw to use it as the last fallback.
+
+```bash
+# See what would happen (dry-run — no changes)
+bash scripts/setup-ollama.sh
+
+# Install and configure
+bash scripts/setup-ollama.sh --apply
+
+# Or integrate with full setup
+node scripts/setup.mjs --key <API_KEY> --with-ollama --apply --restart
+```
+
+**Hardware → Model auto-selection:**
+| Available RAM | Model | Quality |
+|--------------|-------|---------|
+| < 2 GB | qwen3.5:1.5b | Basic — simple Q&A |
+| 2–4 GB | qwen3.5:4b | Good — general tasks |
+| 4–8 GB | qwen3.5:9b | Strong — coding, analysis |
+| 8–16 GB | qwen3.5:14b | Very strong — complex reasoning |
+| 16–32 GB | qwen3.5:32b | Excellent — near-frontier |
+| 32+ GB | qwen3.5:72b | Frontier — matches cloud |
+
+**Additional commands:**
+```bash
+# Check current Ollama status
+bash scripts/setup-ollama.sh --status
+
+# Force a specific model
+bash scripts/setup-ollama.sh --model qwen3.5:32b --apply
+
+# Remove Ollama from OpenClaw config
+bash scripts/setup-ollama.sh --uninstall
+```
+
+**Key details:**
+- Never exceeds 70% of total RAM — leaves headroom for OS and apps
+- Detects Apple Metal, NVIDIA CUDA, AMD ROCm GPUs
+- Sets up auto-start via launchd (macOS) or systemd (Linux)
+- Dry-run by default — you must pass `--apply` to execute
+- Uses Qwen3.5 family for consistent behavior across all sizes (Apache 2.0 license)
 
 ### ⚠️ Critical Guardrails
 
