@@ -2,7 +2,103 @@
 
 All notable changes to EverClaw are documented here.
 
-## [2026.3.16] - 2026-03-12
+## [2026.3.23] - 2026-03-17
+
+### Added
+- **agent-chat skill v0.1.0**: Real-time XMTP E2E-encrypted messaging
+  - Always-on daemon with `@xmtp/agent-sdk` v2.3.0
+  - Filesystem bridge (outbox/inbox) for OpenClaw IPC
+  - 3-policy consent system (open/handshake/strict)
+  - Middleware chain: Consent → CommsGuard V6 → Router
+  - Two-tier identity: 28 flavor canonical + per-user wallets
+  - launchd (macOS) + systemd (Linux) service templates
+  - CLI: status, health, groups, setup commands
+  - 36-test suite (unit + adversarial, 114ms)
+
+### Security
+- **agent-chat router.mjs**: Path traversal vulnerability fixed — `correlationId` sanitized to `[a-zA-Z0-9_-]` before inbox file write
+- **agent-chat identity.mjs**: Runtime warning when wallet key length ≠ 66 (catches truncated keys)
+- **agent-chat setup-identity.mjs**: Post-setup PII sanity check scans source files for leaked address
+
+### Process
+- Full SOP-001 pipeline: Research → Architecture (v2.3) → Code (Phases A/B/C) → Cross-model audit (Grok 4.2 + Claude 4.6) → Testing (36/36) → PII scan → Deploy → Ecosystem sync (30/31)
+
+## [2026.3.22] - 2026-03-16
+
+### Security
+- **everclaw-wallet.mjs (Stage 2)**: Fix private key leak in `cmdSetup` — capture `keychainStore` return, fallback to encrypted file, banner shows actual backend
+- **everclaw-wallet.mjs (Stage 3)**: Add simulation + rich confirmation to `cmdSwap` — shows amount in, expected out, min after slippage
+- **everclaw-wallet.mjs (Stage 4)**: Add simulation + unlimited approval warning to `cmdApprove` — CRITICAL WARNING for `maxUint256` approvals
+- **everclaw-wallet.mjs (Stage 5)**: Double confirmation for `export-key` — "YES I UNDERSTAND" exact match + 5-second countdown + Ctrl+C abort
+- **everclaw-wallet.mjs (Dry-run)**: `--dry-run` flag gates `writeContract` calls in cmdSwap and cmdApprove; simulation + confirmation still execute
+
+### Process
+- Phase 2 Stages 2–5 + dry-run — audited by Claude 4.6, tested 7/7 PASS, PII scan PASS
+- `isUnlimited` fix: uses `!amountStr` (not `=== "unlimited"` which would crash `parseEther`)
+
+## [2026.3.21] - 2026-03-16
+
+### Security
+- **safe-transfer.mjs**: Add `simulateContract` before `writeContract` (catches reverts before gas spend)
+- **safe-transfer.mjs**: Add interactive confirmation prompt before on-chain execution
+- **safe-transfer.mjs**: Remove no-op signature packing code (dead variables `sortedSignature`, `encodedSignature`)
+- **safe-transfer.mjs**: Replace `encodedSignature` with `signature` in writeContract args (fixes potential ReferenceError)
+- **safe-transfer.mjs**: Replace hardcoded `gas: 200000n` with dynamic estimation (`gas: undefined`)
+
+### Process
+- Phase 2 Stage 1 — audited by Claude 4.6, tested 5/5 PASS, PII scan PASS
+- SOP-001 pipeline with dedicated agents (Architect, Coder, Auditor, Tester, PII Checker, Deployer)
+
+## [2026.3.20] - 2026-03-15
+
+### Added
+- **Comprehensive documentation suite** — 22 documents covering all aspects of EverClaw
+  - Getting started: installation, quick-start, configuration
+  - Features: inference, wallet, fallback, ollama, x402-payments, erc8004-registry
+  - Scripts: overview and reference for 43 scripts
+  - Operations: monitoring, three-shifts, troubleshooting
+  - Reference: API, models, contracts, acquiring-mor, economics
+  - Security: security overview, shield policy
+- Total: 5,412 lines, 17,422 words, 596 KB
+
+### Changed
+- Docker image version bumped to 2026.3.20
+
+---
+
+## [2026.3.19] - 2026-03-15
+
+### Fixed
+- **morpheus-proxy.mjs** — Model refresh was parsing router response incorrectly
+  - Router returns `{ models: [...] }` but code expected raw array
+  - Fix: `const data = JSON.parse(res.body.toString()); const models = Array.isArray(data) ? data : (data.models || []);`
+  - Result: Model list now refreshes correctly, showing 40 models including GLM-5
+  - Backwards compatible — handles both array and object formats
+
+### Changed
+- Docker image version bumped to 2026.3.19
+
+---
+
+## [2026.3.18] - 2026-03-15
+
+### Security — Phase 1 Audit Hardening (morpheus-proxy.mjs)
+- **CRITICAL: Auth bypass removed** — `PROXY_API_KEY` no longer defaults to `"morpheus-local"`. Proxy now requires a strong key via env var or exits on startup.
+- **Cookie caching** — `getBasicAuth()` now caches the `.cookie` file read for 60 seconds instead of reading disk on every request. Cache invalidated on error.
+- **Persistent sessions** — Sessions saved to `~/.morpheus/sessions.json` on every mutation (`set`/`delete`) and on graceful shutdown (SIGTERM/SIGINT). Loaded on startup. Proxy restarts no longer lose active sessions.
+- **Rate limiting + body size protection** — New `securityMiddleware` runs before auth: 30 req/min per IP, 1MB body limit, smart cleanup at 800+ entries to prevent memory leaks.
+- File grew from 833 → 924 lines. Zero new dependencies. All 36 existing tests pass.
+
+### Fixed
+- **morpheus-proxy.mjs** — Model refresh was parsing router response incorrectly
+  - Router returns `{ models: [...] }` but code expected raw array
+  - Fix: `const data = JSON.parse(res.body.toString()); const models = Array.isArray(data) ? data : (data.models || []);`
+  - Result: Model list now refreshes correctly, showing 40 models including GLM-5
+  - Backwards compatible — handles both array and object formats
+
+---
+
+## [2026.3.17] - 2026-03-15
 
 ### Changed
 - **install-with-deps.sh** — Complete zero-prompt rewrite (5-stage build)

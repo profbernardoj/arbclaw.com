@@ -50,7 +50,8 @@ async function refreshModelMap() {
       console.warn(`[morpheus-proxy] Model refresh returned ${res.status}, keeping existing map`);
       return;
     }
-    const models = JSON.parse(res.body.toString());
+    const data = JSON.parse(res.body.toString());
+    const models = Array.isArray(data) ? data : (data.models || []);
     if (!Array.isArray(models) || models.length === 0) {
       console.warn("[morpheus-proxy] Model refresh returned empty list, keeping existing map");
       return;
