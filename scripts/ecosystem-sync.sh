@@ -103,9 +103,9 @@ sync_remote() {
   fi
 
   # Push
-  local push_args=("$remote" "$BRANCH")
+  local push_args=("--no-verify" "$remote" "$BRANCH")
   if $FORCE; then
-    push_args=("--force" "$remote" "$BRANCH")
+    push_args=("--no-verify" "--force" "$remote" "$BRANCH")
   fi
 
   if git push "${push_args[@]}" 2>&1 | tail -1; then

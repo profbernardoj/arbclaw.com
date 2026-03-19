@@ -8,6 +8,18 @@
     "IMPORTANT: 'everclaw' is a SKILL, NOT a provider.",
     "NEVER use 'everclaw/' as a model prefix."
   ],
+  "gateway": {
+    "controlUi": {
+      "_comment": "Required when gateway binds to non-loopback (0.0.0.0 / lan). Without this, gateway crashes on startup.",
+      "enabled": true,
+      "allowedOrigins": [
+        "http://localhost:18789",
+        "http://127.0.0.1:18789",
+        "http://[::1]:18789"
+      ],
+      "dangerouslyAllowHostHeaderOriginFallback": true
+    }
+  },
   "models": {
     "mode": "merge",
     "providers": {

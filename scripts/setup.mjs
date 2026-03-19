@@ -124,6 +124,26 @@ function mergeConfig(existing, template) {
     }
   }
 
+  // Merge gateway.controlUi (safe — don't overwrite user customizations)
+  const tplControlUi = template.gateway?.controlUi;
+  if (tplControlUi) {
+    if (!merged.gateway) merged.gateway = {};
+    if (!merged.gateway.controlUi) merged.gateway.controlUi = {};
+    // Only set allowedOrigins if user hasn't customized them
+    if (!merged.gateway.controlUi.allowedOrigins || merged.gateway.controlUi.allowedOrigins.length === 0) {
+      merged.gateway.controlUi.allowedOrigins = tplControlUi.allowedOrigins;
+    }
+    // Set enabled if not already explicitly set
+    if (merged.gateway.controlUi.enabled === undefined) {
+      merged.gateway.controlUi.enabled = tplControlUi.enabled;
+    }
+    // Set host-header fallback only if not already set
+    if (merged.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback === undefined) {
+      merged.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback = tplControlUi.dangerouslyAllowHostHeaderOriginFallback;
+    }
+    console.log('🔧 Auto-configured safe gateway.controlUi defaults');
+  }
+
   // Merge agent defaults (primary + fallbacks)
   const tplDefaults = template.agents?.defaults?.model;
   if (tplDefaults) {

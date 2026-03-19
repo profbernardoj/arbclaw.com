@@ -2,6 +2,21 @@
 
 All notable changes to EverClaw are documented here.
 
+## [2026.3.27] - 2026-03-19
+
+### Fixed
+- **Gateway startup crash on non-loopback binds (`--bind lan`)** — Now auto-configures `controlUi.allowedOrigins` + `dangerouslyAllowHostHeaderOriginFallback` safely in Docker, config templates, and setup.mjs. Fixes container first-run crash reported by tester.
+- **Misleading "✅ EverClaw is ready!" banner** — No longer prints success when gateway actually crashed. Shows clear "❌ EverClaw failed to start" with actionable fix steps and exits with code 1.
+- **ENOENT spam on first run** — Pre-creates `.morpheus/.cookie` and `.morpheus/sessions.json` in both Dockerfile and entrypoint. Eliminates all "Failed to read cookie file" and "Failed to save sessions" warnings.
+- **Empty `allowedOrigins: []` edge case** — jq uses length-check instead of `//` coalescing, so an explicit empty array is correctly replaced with defaults.
+- **Non-Docker installs** — Added `gateway.controlUi` block to all 3 config templates (linux, mac, gateway-only) and safe-merge logic in `setup.mjs`. Bare-metal users now get the same crash protection.
+- **Safe config merge** — Docker entrypoint and setup.mjs both preserve user-customized `allowedOrigins` and `dangerouslyAllowHostHeaderOriginFallback` values instead of overwriting.
+
+### Changed
+- Linux config template now includes `dangerouslyDisableDeviceAuth: true` (headless/container environments where device auth flow doesn't work)
+- Failure banner shows 3 actionable quick fixes (delete config + restart, check origins, report on GitHub)
+- Auto-config log line `🔧 Auto-configured gateway.controlUi for container environment` for transparency
+
 ## [2026.3.25] - 2026-03-19
 
 ### Added

@@ -48,6 +48,13 @@ mkdir -p "${WORKSPACE}/memory/goals"
 mkdir -p "${WORKSPACE}/shifts"
 mkdir -p "${WORKSPACE}/shifts/history"
 
+# Create Morpheus directories to avoid ENOENT warnings on first run/shutdown
+MORPHEUS_HOME="${HOME}/.morpheus"
+mkdir -p "${MORPHEUS_HOME}"
+# Placeholder files so proxy never warns about missing cookie/sessions
+touch "${MORPHEUS_HOME}/.cookie" 2>/dev/null || true
+touch "${MORPHEUS_HOME}/sessions.json" 2>/dev/null || true
+
 # Copy shift templates if needed
 for f in state.json context.md handoff.md tasks.md; do
   target="${WORKSPACE}/shifts/$f"
@@ -104,26 +111,45 @@ else
   CURRENT_MODE=$(jq -r '.gateway.auth.mode // empty' "$CONFIG_FILE" 2>/dev/null)
 
   if [ -z "$CURRENT_MODE" ]; then
-    # No auth mode set — inject full auth config
+    # No auth mode set — inject full auth config + controlUi origins (safe merge)
     TMP_CONFIG=$(mktemp)
     if jq --arg token "$AUTH_TOKEN" --argjson dda "$DDA_VALUE" '
       .gateway.auth.mode = "token" |
       .gateway.auth.token = $token |
-      .gateway.controlUi.enabled = true |
-      .gateway.controlUi.dangerouslyDisableDeviceAuth = $dda
+      .gateway.controlUi.enabled = (.gateway.controlUi.enabled // true) |
+      .gateway.controlUi.dangerouslyDisableDeviceAuth = $dda |
+      .gateway.controlUi.allowedOrigins = (
+        if (.gateway.controlUi.allowedOrigins // [] | length) == 0
+        then ["http://localhost:18789", "http://127.0.0.1:18789", "http://[::1]:18789"]
+        else .gateway.controlUi.allowedOrigins end
+      ) |
+      .gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback = (
+        .gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback // true
+      )
     ' "$CONFIG_FILE" > "$TMP_CONFIG"; then
       mv "$TMP_CONFIG" "$CONFIG_FILE"
       echo "🔑 Auth token configured ($TOKEN_SOURCE)"
+      echo "🔧 Auto-configured gateway.controlUi for container environment"
     else
       rm -f "$TMP_CONFIG"
       echo "⚠️  Failed to inject auth config — jq error"
     fi
   elif [ "$CURRENT_MODE" = "token" ] && [ -n "${OPENCLAW_GATEWAY_TOKEN:-}" ]; then
-    # Auth mode is token and user provided env var override — update token
+    # Auth mode is token and user provided env var override — update token + ensure origins
     TMP_CONFIG=$(mktemp)
     if jq --arg token "$AUTH_TOKEN" --argjson dda "$DDA_VALUE" '
       .gateway.auth.token = $token |
-      .gateway.controlUi.dangerouslyDisableDeviceAuth = $dda
+      .gateway.controlUi.dangerouslyDisableDeviceAuth = $dda |
+      .gateway.controlUi.allowedOrigins = (
+        if (.gateway.controlUi.allowedOrigins // []) | length > 0
+        then .gateway.controlUi.allowedOrigins
+        else ["http://localhost:18789", "http://127.0.0.1:18789", "http://[::1]:18789"]
+        end
+      ) |
+      if (.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback // null) == null
+      then .gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback = true
+      else .
+      end
     ' "$CONFIG_FILE" > "$TMP_CONFIG"; then
       mv "$TMP_CONFIG" "$CONFIG_FILE"
       echo "🔑 Auth token updated from environment variable"
@@ -207,19 +233,24 @@ GATEWAY_PID=$!
 echo "⏳ Waiting for gateway..."
 HEALTH_ATTEMPTS=0
 MAX_ATTEMPTS=60
+GATEWAY_ALIVE=true
+GATEWAY_HEALTHY=false
+
 while [ $HEALTH_ATTEMPTS -lt $MAX_ATTEMPTS ]; do
   if curl -sf http://127.0.0.1:18789/health > /dev/null 2>&1; then
+    GATEWAY_HEALTHY=true
     break
   fi
   if ! kill -0 "$GATEWAY_PID" 2>/dev/null; then
     echo "⚠️  Gateway process exited unexpectedly"
+    GATEWAY_ALIVE=false
     break
   fi
   HEALTH_ATTEMPTS=$((HEALTH_ATTEMPTS + 1))
   sleep 1
 done
 
-if [ $HEALTH_ATTEMPTS -lt $MAX_ATTEMPTS ]; then
+if [ "$GATEWAY_HEALTHY" = "true" ]; then
   echo ""
   echo "╔══════════════════════════════════════════════════════════════════╗"
   echo "║  ✅ EverClaw is ready!                                          ║"
@@ -235,6 +266,25 @@ if [ $HEALTH_ATTEMPTS -lt $MAX_ATTEMPTS ]; then
   echo "⚠️  For local use only. Do not expose to the internet without"
   echo "   additional authentication (reverse proxy, VPN, etc)."
   echo ""
+elif [ "$GATEWAY_ALIVE" = "false" ]; then
+  echo ""
+  echo "╔══════════════════════════════════════════════════════════════════╗"
+  echo "║  ❌ EverClaw failed to start                                    ║"
+  echo "║                                                                 ║"
+  echo "║  The OpenClaw gateway crashed during startup.                   ║"
+  echo "║  Check the error message above for details.                     ║"
+  echo "║                                                                 ║"
+  echo "║  Quick fixes to try:                                            ║"
+  echo "║  1. Delete config and restart (auto-regenerates):               ║"
+  echo "║     rm ~/.openclaw/openclaw.json && docker restart everclaw     ║"
+  echo "║  2. Check gateway.controlUi.allowedOrigins is set              ║"
+  echo "║  3. Report at github.com/everclaw with docker logs             ║"
+  echo "╚══════════════════════════════════════════════════════════════════╝"
+  echo ""
+  echo "   Config: ${CONFIG_FILE}"
+  echo "   Logs:   docker logs everclaw"
+  echo ""
+  exit 1
 else
   echo ""
   echo "⚠️  Gateway did not respond within ${MAX_ATTEMPTS}s"
@@ -244,4 +294,6 @@ else
 fi
 
 # Block on gateway process (container lifecycle tied to gateway)
-wait $GATEWAY_PID
+if [ "$GATEWAY_ALIVE" = "true" ]; then
+  wait $GATEWAY_PID
+fi
