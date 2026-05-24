@@ -1,5 +1,13 @@
 # EverClaw Full Stack — OpenClaw + Morpheus Inference
 #
+# ─────────────────────────────────────────────────────────────────────────────
+# Version pinning policy:
+#   - EverClaw versions (package.json, image tags, SKILL.md) never use a 'v' prefix
+#   - OpenClaw git tags and the OPENCLAW_VERSION arg always do
+#   - The EVERCLAW_VERSION build arg (without 'v') is supplied by docker-compose.yml
+#     for image labeling
+# ─────────────────────────────────────────────────────────────────────────────
+#
 # Multi-stage build:
 #   Stage 1: Build OpenClaw from source (gateway + web UI)
 #   Stage 2: Production image with OpenClaw + EverClaw skill
@@ -12,7 +20,7 @@
 #   docker build -t ghcr.io/everclaw/everclaw:latest .
 #
 # Build with specific OpenClaw version:
-#   docker build --build-arg OPENCLAW_VERSION=v2026.5.12 -t ghcr.io/everclaw/everclaw:latest .
+#   docker build --build-arg OPENCLAW_VERSION=v2026.5.22 -t ghcr.io/everclaw/everclaw:latest .
 #
 # Run:
 #   docker run -d \
@@ -41,10 +49,8 @@
 #   OPENCLAW_ENABLE_DEVICE_AUTH=true — Re-enable device auth (default: disabled for containers)
 
 # ─── Stage 1: Build OpenClaw ─────────────────────────────────────────────────
-# Pin OpenClaw version for reproducible builds.
-# Update this when upgrading to a new release.
 
-ARG OPENCLAW_VERSION=v2026.5.12
+ARG OPENCLAW_VERSION=v2026.5.22
 
 FROM node:22-bookworm AS openclaw-builder
 

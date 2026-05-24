@@ -2,6 +2,49 @@
 
 All notable changes to EverClaw are documented here.
 
+## [2026.5.24.0400] - 2026-05-24
+
+### OpenClaw Pin Bump v2026.5.12 → v2026.5.22
+
+- **packages/core/Dockerfile:** OpenClaw build target updated to `v2026.5.22`; version-prefix policy comment block moved to top of file (single source of truth for EverClaw vs OpenClaw prefix rules)
+- **packages/core/docker-compose.yml:** Image tag, `OPENCLAW_VERSION` build arg, and `EVERCLAW_VERSION` updated with inline policy comments
+- **SKILL.md (root):** Version stamp and embedded diagnostics JSON updated; added bidirectional description-sync YAML comment (also aligns version from stale `2026.5.15.1418` to current release)
+- **packages/core/SKILL.md:** Version stamp and embedded diagnostics JSON updated; added bidirectional description-sync YAML comment; removed erroneous `v` prefix to comply with documented pinning policy
+- **package.json:** Version bump to `2026.5.24.0400`
+
+> This is a pure pin-bump release — no EverClaw code logic changes.
+
+### Upstream Highlights (OpenClaw v2026.5.12 → v2026.5.22)
+
+#### New Features
+- **Meeting Notes plugin:** External source-only plugin with auto-start capture, manual transcript imports, CLI access, and Discord voice as first live source
+- **Control UI chat search:** Search and "Load More" pagination in session picker for bounded initial loads
+- **Plugin SDK poll sender:** Generic channel-message poll sender so channel plugins can expose poll delivery
+- **Embedding providers contract:** General `embeddingProviders` capability contract and registration API for reusable embedding surfaces outside memory adapters
+- **xAI/Grok:** OAuth auth profiles reused for web_search, Grok model aliases, and active-agent auth threaded through web search
+- **Plugin SDK session helpers:** Row-level session workflow helpers deprecating `loadSessionStore` whole-store reads
+
+#### Fixes
+- **Models:** Pruned retired Groq, GitHub Copilot, OpenAI, xAI, and old Claude catalog entries; doctor migration upgrades existing configs
+- **Gateway lifecycle:** Provider timeouts now persist failed session state instead of leaving sessions stuck; internal stream-error placeholders no longer replayed as model text
+- **Sessions:** Write-lock max-hold policy enforced during acquisition so stale locks can be reclaimed
+- **Telegram:** Local path/filePath and structured attachment media sent from sendMessage actions instead of text-only
+- **Ollama:** Local embedding origins bypass managed proxy correctly
+- **Directive tags:** Message and content-part object identity preserved when display stripping makes no changes
+- **Gateway state dir:** Relative `OPENCLAW_STATE_DIR` overrides pinned to absolute path at startup
+
+#### Performance
+- **Model list pre-warm:** `/models` calls reduced from ~20s to ~5ms by pre-warming CLI discovery on startup, config reload, and install
+- **Gateway startup:** Lazy-load startup-idle plugin work, core method handlers, and embedded ACPX runtime so health/ready signals no longer wait on unused handler trees
+- **Plugin metadata snapshots:** Immutable snapshots reused across startup, config, model, channel, setup, and secret metadata readers
+- **Process-stable channel catalog:** Avoid repeated bundled-channel boundary checks
+
+#### Security and Packaging
+- **Release packaging:** npm shrinkwrap + `engines.npm` lock + `node_modules` bundled in tarball for locked dependency graphs
+- **npm tarball:** Documentation images and assets excluded, reducing published package size
+
+(Reference: https://github.com/openclaw/openclaw/releases/tag/v2026.5.22)
+
 ## [2026.5.20.1645] - 2026-05-20
 
 ### Changed — Default Model Upgrade to GLM-5.1
