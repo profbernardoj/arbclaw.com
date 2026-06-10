@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * EverClaw Auth Proxy — Privy JWT authentication for hosted containers
+ * OpenClaw Auth Proxy — Privy JWT authentication for hosted containers
  *
  * Architecture:
  *   Internet → Auth Proxy (:18789) → OpenClaw (:18790, internal)
@@ -594,7 +594,7 @@ function handleUpgrade(req, socket, head) {
 
 async function main() {
   console.log('');
-  console.log('🔒 EverClaw Auth Proxy');
+  console.log('🔒 OpenClaw Auth Proxy');
   console.log('');
 
   validateConfig();
