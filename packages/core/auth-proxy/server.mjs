@@ -91,8 +91,11 @@ const CIG_CONFIG = {
   inferenceUrl: process.env.CIG_INFERENCE_URL || '',
   bindingSecret: process.env.CIG_BINDING_SECRET || '',
   containerFqdn: process.env.CIG_CONTAINER_FQDN || process.env.CONTAINER_FQDN || '',
+  fqdnLocked: !!(process.env.CIG_CONTAINER_FQDN || process.env.CONTAINER_FQDN),
 };
 const CIG_ENABLED = !!(CIG_CONFIG.mintUrl && CIG_CONFIG.inferenceUrl && CIG_CONFIG.bindingSecret);
+// Optional suffix restriction for auto-detected FQDNs (e.g. ".manifest0.net")
+const CIG_ALLOWED_FQDN_SUFFIX = process.env.CIG_ALLOWED_FQDN_SUFFIX || '';
 const CIG_TOKEN_TTL_MS = 10 * 60 * 1000;    // 10 minutes
 const CIG_TOKEN_REFRESH_MS = 60_000;         // Refresh 60s before expiry
 const CIG_FETCH_TIMEOUT_MS = 10_000;         // 10s timeout for CIG HTTP calls
@@ -466,16 +469,41 @@ proxy.on('error', (error, req, res) => {
 // Mints a CIG token (cached, refreshed 60s before expiry) and forwards
 // the inference request to the external CIG endpoint.
 
+// Auto-detect FQDN from Host header (one-time, only if not set via env).
+// Buffer containers don't know their FQDN at provision time; the first external
+// request carries the Manifest ingress hostname which we lock as the FQDN.
+// Security: CIG_ALLOWED_FQDN_SUFFIX restricts accepted FQDNs to a known ingress
+// domain (e.g. ".manifest0.net"), preventing Host-header poisoning.
+// Node.js is single-threaded so no mutex is needed for the fqdnLocked flag.
+function maybeAutoDetectFqdn(reqHost) {
+  if (CIG_CONFIG.fqdnLocked || !CIG_ENABLED) return;
+  if (!reqHost || reqHost === 'localhost' || reqHost.startsWith('127.') || reqHost.startsWith('[::1]')) return;
+  const fqdn = reqHost.split(':')[0].toLowerCase();
+  // Only accept real domain names (must contain a dot)
+  if (!fqdn || !fqdn.includes('.')) return;
+  // Enforce suffix restriction if configured (prevents Host-header poisoning)
+  if (CIG_ALLOWED_FQDN_SUFFIX && !fqdn.endsWith(CIG_ALLOWED_FQDN_SUFFIX)) {
+    console.warn(`[cig] Rejected FQDN auto-detect: ${fqdn} does not end with ${CIG_ALLOWED_FQDN_SUFFIX}`);
+    return;
+  }
+  CIG_CONFIG.containerFqdn = fqdn;
+  CIG_CONFIG.fqdnLocked = true;
+  console.log(`[cig] Auto-detected container FQDN from Host header: ${fqdn}`);
+}
+
 async function mintCigToken() {
   // Return cached token if still valid (with refresh buffer)
   if (cigTokenCache.token && Date.now() < cigTokenCache.expiresAt - CIG_TOKEN_REFRESH_MS) {
     return cigTokenCache.token;
   }
 
-  // FQDN is required for per-container binding — fail hard if missing
+  // FQDN is required for per-container binding
   const fqdn = CIG_CONFIG.containerFqdn;
   if (!fqdn) {
-    throw new Error('CIG_CONTAINER_FQDN or CONTAINER_FQDN environment variable is required');
+    // FQDN not yet auto-detected — skip CIG for this request.
+    // Subsequent requests will have the FQDN after auto-detection.
+    console.warn('[cig] Cannot mint token: FQDN not yet detected (will auto-detect from Host header)');
+    throw new Error('FQDN not yet detected — awaiting auto-detection from Host header');
   }
 
   const controller = new AbortController();
@@ -601,6 +629,11 @@ async function handleCigProxy(req, res, url) {
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
+
+  // Auto-detect FQDN from first external request (buffer pool containers)
+  if (CIG_ENABLED && !CIG_CONFIG.fqdnLocked) {
+    maybeAutoDetectFqdn(req.headers.host);
+  }
 
   // ── Health check (no auth) ──
   if (pathname === '/health') {
